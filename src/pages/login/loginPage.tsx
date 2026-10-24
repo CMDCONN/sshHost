@@ -7,7 +7,7 @@ export type Credentials = {
 }
 
 type LoginFormProps = {
-    onLogin: (credentials: Credentials) => void
+    onLogin: (credentials: Credentials) => Promise<void>
     onShowSignUp: () => void
 }
 
@@ -15,6 +15,8 @@ export default function LoginForm({ onLogin, onShowSignUp }: LoginFormProps) {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [remember, setRemember] = useState(false)
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
 
     return (
         <main className="bg-gray-50 px-4 md:px-8 dark:bg-neutral-900">
@@ -32,9 +34,16 @@ export default function LoginForm({ onLogin, onShowSignUp }: LoginFormProps) {
                         className="p-6 rounded-lg bg-white border border-slate-300 shadow-xs md:p-8 dark:bg-neutral-800 dark:border-neutral-700">
                         <h1 className="text-slate-900 text-center text-3xl font-bold dark:text-slate-50">Sign in</h1>
 
-                        <form className="space-y-6 mt-10" onSubmit={(e) => {
+                        <form className="space-y-6 mt-10" onSubmit={async (e) => {
                             e.preventDefault()
-                            onLogin({ email, password, remember })
+                            setError('')
+                            setSubmitting(true)
+                            try {
+                                await onLogin({ email, password, remember })
+                            } catch (err) {
+                                setError(err instanceof Error ? err.message : 'Sign in failed')
+                                setSubmitting(false)
+                            }
                         }}>
                             <div>
                                 <label htmlFor="email"
@@ -74,9 +83,11 @@ export default function LoginForm({ onLogin, onShowSignUp }: LoginFormProps) {
                                 </label>
                             </div>
 
-                            <button type="submit"
-                                className="w-full py-2 px-3.5 text-sm rounded-md font-semibold cursor-pointer tracking-wide text-white border border-blue-600 bg-blue-600 hover:bg-blue-700 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-                                Sign in</button>
+                            {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+                            <button type="submit" disabled={submitting}
+                                className="disabled:opacity-60 w-full py-2 px-3.5 text-sm rounded-md font-semibold cursor-pointer tracking-wide text-white border border-blue-600 bg-blue-600 hover:bg-blue-700 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                                {submitting ? 'Signing in…' : 'Sign in'}</button>
 
                             <div className="text-slate-900 text-sm text-center dark:text-slate-50">Don't have an account? <button type="button" onClick={onShowSignUp}
                                 className="text-blue-700 hover:underline ml-1 font-medium cursor-pointer dark:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded">Sign

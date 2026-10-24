@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Sidebar, SidebarItem } from '../sidebar'
 import ClientDetails from './clientDetails'
 import ClientForm from './clientForm'
+import ConnectPanel from './connectPanel'
 import { useClients } from './useClients'
 
 type Mode = 'view' | 'add' | 'edit'
 
 export default function ClientsView() {
-    const { clients, addClient, updateClient, removeClient } = useClients()
+    const { clients, loading, error, addClient, updateClient, removeClient, forgetHostKey, hostKeyRecorded } = useClients()
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [mode, setMode] = useState<Mode>('view')
 
@@ -26,7 +27,13 @@ export default function ClientsView() {
     return (
         <div className="h-full flex flex-col md:flex-row">
             <Sidebar title={`Clients (${clients.length})`} action={addButton}>
-                {clients.length === 0 && (
+                {loading && (
+                    <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+                )}
+                {error && (
+                    <p className="px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+                )}
+                {!loading && !error && clients.length === 0 && (
                     <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No clients yet.</p>
                 )}
                 {clients.map((client) => (
@@ -38,30 +45,43 @@ export default function ClientsView() {
                 ))}
             </Sidebar>
 
-            <main className="flex-1 overflow-y-auto p-6 md:p-10">
+            <main className="flex-1 min-w-0 overflow-y-auto p-6 md:p-10">
                 {mode === 'add' ? (
                     <ClientForm title="Add client" submitLabel="Add client"
-                        onSubmit={(input) => {
-                            const client = addClient(input)
+                        onSubmit={async (input) => {
+                            const client = await addClient(input)
                             setSelectedId(client.id)
                             setMode('view')
                         }}
                         onCancel={() => setMode('view')} />
                 ) : mode === 'edit' && selected ? (
                     <ClientForm key={selected.id} title="Edit client" submitLabel="Save changes" initial={selected}
-                        onSubmit={(input) => {
-                            updateClient(selected.id, input)
+                        onSubmit={async (input) => {
+                            await updateClient(selected.id, input)
                             setMode('view')
                         }}
                         onCancel={() => setMode('view')} />
                 ) : selected ? (
-                    <ClientDetails key={selected.id} client={selected}
-                        onEdit={() => setMode('edit')}
-                        onDelete={() => {
-                            removeClient(selected.id)
-                            setSelectedId(null)
-                        }} />
-                ) : (
+                    <div className="flex flex-col gap-10 xl:flex-row xl:h-full">
+                        <div className="max-w-3xl xl:w-96 xl:shrink-0">
+                            <ClientDetails key={selected.id} client={selected}
+                                onEdit={() => setMode('edit')}
+                                onDelete={async () => {
+                                    try {
+                                        await removeClient(selected.id)
+                                        setSelectedId(null)
+                                    } catch (err) {
+                                        alert(err instanceof Error ? err.message : 'Could not delete the client')
+                                    }
+                                }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <ConnectPanel key={selected.id} client={selected}
+                                onHostKeyRecorded={(fingerprint) => hostKeyRecorded(selected.id, fingerprint)}
+                                onForgetHostKey={() => forgetHostKey(selected.id)} />
+                        </div>
+                    </div>
+                ) : !loading && !error && (
                     <div className="h-full flex flex-col items-center justify-center text-center">
                         <h1 className="text-lg font-semibold">No clients yet</h1>
                         <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">

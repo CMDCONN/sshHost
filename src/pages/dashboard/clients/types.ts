@@ -10,10 +10,11 @@ export type Client = {
     keyPath: string
     tags: string[]
     notes: string
+    hostKeyFingerprint: string | null  // recorded by the server on first connect
     createdAt: string
 }
 
-export type ClientInput = Omit<Client, 'id' | 'createdAt'>
+export type ClientInput = Omit<Client, 'id' | 'hostKeyFingerprint' | 'createdAt'>
 
 export function sshCommand(client: ClientInput): string {
     const parts = ['ssh']

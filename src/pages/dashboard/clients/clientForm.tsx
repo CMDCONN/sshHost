@@ -20,7 +20,7 @@ type ClientFormProps = {
     title: string
     submitLabel: string
     initial?: ClientInput
-    onSubmit: (input: ClientInput) => void
+    onSubmit: (input: ClientInput) => Promise<void>
     onCancel: () => void
 }
 
@@ -33,20 +33,29 @@ export default function ClientForm({ title, submitLabel, initial = emptyClient, 
     const [keyPath, setKeyPath] = useState(initial.keyPath)
     const [tags, setTags] = useState(initial.tags.join(', '))
     const [notes, setNotes] = useState(initial.notes)
+    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
 
     return (
-        <form className="max-w-2xl space-y-8" onSubmit={(e) => {
+        <form className="max-w-2xl space-y-8" onSubmit={async (e) => {
             e.preventDefault()
-            onSubmit({
-                name: name.trim(),
-                hostname: hostname.trim(),
-                port: Number(port),
-                username: username.trim(),
-                authMethod,
-                keyPath: authMethod === 'key' ? keyPath.trim() : '',
-                tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-                notes: notes.trim(),
-            })
+            setError('')
+            setSubmitting(true)
+            try {
+                await onSubmit({
+                    name: name.trim(),
+                    hostname: hostname.trim(),
+                    port: Number(port),
+                    username: username.trim(),
+                    authMethod,
+                    keyPath: authMethod === 'key' ? keyPath.trim() : '',
+                    tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+                    notes: notes.trim(),
+                })
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Could not save the client')
+                setSubmitting(false)
+            }
         }}>
             <div>
                 <h1 className="text-2xl font-bold">{title}</h1>
@@ -94,7 +103,7 @@ export default function ClientForm({ title, submitLabel, initial = emptyClient, 
                         <label htmlFor="keyPath" className={labelClass}>Private key path</label>
                         <input id="keyPath" placeholder="~/.ssh/id_ed25519" spellCheck={false} className={`${inputClass} font-mono`}
                             value={keyPath} onChange={(e) => setKeyPath(e.target.value)} />
-                        <p className={hintClass}>Optional. Leave blank to use your default key.</p>
+                        <p className={hintClass}>Optional. A reminder of which key this machine uses. You'll provide the key itself when you connect.</p>
                     </div>
                 ) : (
                     <p className={hintClass}>Passwords are never stored. You'll be asked for it when you connect.</p>
@@ -115,9 +124,11 @@ export default function ClientForm({ title, submitLabel, initial = emptyClient, 
                 </div>
             </div>
 
+            {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
             <div className="flex gap-3">
-                <button type="submit"
-                    className="py-2 px-4 text-sm rounded-md font-semibold cursor-pointer text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                <button type="submit" disabled={submitting}
+                    className="disabled:opacity-60 py-2 px-4 text-sm rounded-md font-semibold cursor-pointer text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     {submitLabel}
                 </button>
                 <button type="button" onClick={onCancel}

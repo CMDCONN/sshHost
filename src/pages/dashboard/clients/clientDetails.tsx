@@ -16,12 +16,13 @@ export default function ClientDetails({ client, onEdit, onDelete }: ClientDetail
         ['Port', String(client.port)],
         ['Username', client.username],
         ['Authentication', client.authMethod === 'key' ? 'SSH key' : 'Password'],
-        ...(client.authMethod === 'key' ? [['Private key', client.keyPath || 'Default key'] as [string, string]] : []),
+        ...(client.authMethod === 'key' && client.keyPath ? [['Private key', client.keyPath] as [string, string]] : []),
+        ['Host key', client.hostKeyFingerprint ?? 'Saved on first connect'],
         ['Added', new Date(client.createdAt).toLocaleDateString()],
     ]
 
     return (
-        <div className="max-w-3xl space-y-8">
+        <div className="space-y-8">
             <div className="flex flex-wrap items-start gap-4">
                 <div className="min-w-0">
                     <h1 className="text-2xl font-bold truncate">{client.name}</h1>
